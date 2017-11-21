@@ -1,0 +1,19 @@
+<resources>
+    <string name="app_name">Rider Safer</string>
+    <string name="title_activity_maps">Map</string>
+
+    <!--main_layout-->
+    <string name="tittle">神騎趴趴夠</string>
+    <string name="version">Ver.1.0</string>
+
+    <!--activity_maps-->
+    <string name="navigate">導航</string>
+    <string name="end">目的地</string>
+    <string name="permission_denied">拒絕授權，您將無法使用自我位置功能</string>
+    <string name="not_found">找不到此地點</string>
+    <string name="zero_results">找不到路徑</string>
+    <string name="invalid_request">參數無效，請聯絡開發人員</string>
+    <string name="over_query_limit">要求次數過多，請聯絡開發人員</string>
+    <string name="request_denied">拒絕規劃服務，請聯絡開發人員</string>
+    <string name="addLocation">加入途經地點</string>
+</resources>
