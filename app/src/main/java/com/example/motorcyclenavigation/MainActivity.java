@@ -41,27 +41,27 @@ public class MainActivity extends Activity {
         btnSetting = (Button)findViewById(R.id.btnSetting);
         btnAboutus = (Button)findViewById(R.id.btnAboutus);
 
-        myBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-        if(myBluetoothAdapter == null)  finish();
-        if(!myBluetoothAdapter.isEnabled()){
-            Intent en_BT = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
-            startActivityForResult(en_BT, CODE);
-        }
-        Set<BluetoothDevice> pairedDevices = myBluetoothAdapter.getBondedDevices();
-        // There are paired devices. Get the name and address of each paired device.
-        for (BluetoothDevice device : pairedDevices){
-            char [] d = deviceName.toCharArray();
-            for (char c : device.getName().toCharArray()) {
-                if(c == d[i]){
-                    i++;
-                    if(i==7){
-                        deviceAddress = device.getAddress().toString();
-                        break;
-                    }
-                }
-            }
-            i=0;
-        }
+//        myBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+//        if(myBluetoothAdapter == null)  finish();
+//        if(!myBluetoothAdapter.isEnabled()){
+//            Intent en_BT = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+//            startActivityForResult(en_BT, CODE);
+//        }
+//        Set<BluetoothDevice> pairedDevices = myBluetoothAdapter.getBondedDevices();
+//        // There are paired devices. Get the name and address of each paired device.
+//        for (BluetoothDevice device : pairedDevices){
+//            char [] d = deviceName.toCharArray();
+//            for (char c : device.getName().toCharArray()) {
+//                if(c == d[i]){
+//                    i++;
+//                    if(i==7){
+//                        deviceAddress = device.getAddress().toString();
+//                        break;
+//                    }
+//                }
+//            }
+//            i=0;
+//        }
 
         btnMap.setOnClickListener(new View.OnClickListener() {
             @Override

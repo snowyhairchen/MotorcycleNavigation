@@ -67,11 +67,12 @@ import java.util.List;
 import java.util.UUID;
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
+    private final String TAG = "MapsActivity";
     private final int REQUEST_ACCESS_FINE_LOCATION = 0;
     private final int REQUEST_CHECK_SETTINGS = 1;
     private final int MIN_UPDATE_GPS_DISTANCE = 1; // 最小更新GPS距離(公尺)
     private final int MIN_UPDATE_PATH_DISTANCE = 8; // 最小更新GPS距離(公尺)
-    private final int UPDATE_GPS_INTERVAL = 1000; // 更新GPS間距(毫秒)
+    private final int UPDATE_GPS_INTERVAL = 500; // 更新GPS間距(毫秒)
     private final int UPDATE_GPS_FASTEST_INTERVAL = 500; // 最快更新GPS間距(毫秒)
 
     private GoogleMap mMap;
@@ -85,6 +86,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private EditText edtEnd; // 目的地
     // TODO:測試完要刪掉
     private TextView txtInstruction; // 測試用TextView
+    private boolean longclick;
 
     private EditText onFocusEditText;
     private LatLng prevLocation; // 上回取回的經緯度
@@ -120,6 +122,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         edtWayPoints.add(edtEnd);
 
         onFocusEditText = edtEnd;
+        longclick = false;
 
         mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
 
@@ -129,21 +132,21 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         mLocationRequest.setFastestInterval(UPDATE_GPS_FASTEST_INTERVAL); // 設定最快更新間距
         mLocationRequest.setPriority(LocationRequest.PRIORITY_LOW_POWER); // 設定GPS精確度
 
-        deviceAddress = getIntent().getStringExtra(MainActivity.DEVICE_ADDRESS);
-        try{
-            myBluetoothDevice = myBluetoothAdapter.getRemoteDevice(deviceAddress);
-            myBluetoothSocket = myBluetoothDevice.createRfcommSocketToServiceRecord(mUUID);
-            myBluetoothSocket.connect();
-            if(!myBluetoothSocket.isConnected()){
-                Toast.makeText(this, "你沒連到藍芽喔~", Toast.LENGTH_LONG).show();
-            }
-            else{
-                Toast.makeText(this, "連線成功", Toast.LENGTH_LONG).show();
-            }
-        }catch (Exception e){
-            e.printStackTrace();
-            finish();
-        }
+//        deviceAddress = getIntent().getStringExtra(MainActivity.DEVICE_ADDRESS);
+//        try{
+//            myBluetoothDevice = myBluetoothAdapter.getRemoteDevice(deviceAddress);
+//            myBluetoothSocket = myBluetoothDevice.createRfcommSocketToServiceRecord(mUUID);
+//            myBluetoothSocket.connect();
+//            if(!myBluetoothSocket.isConnected()){
+//                Toast.makeText(this, "你沒連到藍芽喔~", Toast.LENGTH_LONG).show();
+//            }
+//            else{
+//                Toast.makeText(this, "連線成功", Toast.LENGTH_LONG).show();
+//            }
+//        }catch (Exception e){
+//            e.printStackTrace();
+//            finish();
+//        }
 
         // 處理定期(UPDATE_GPS_INTERVAL)回傳的GPS
         mLocationCallback = new LocationCallback() {
@@ -153,8 +156,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 StringBuilder user_location = new StringBuilder(location.latitude + "," + location.longitude);
                 double move_distance = prevLocation != null ? SphericalUtil.computeDistanceBetween(location, prevLocation) : Integer.MAX_VALUE;
 
-                Log.d("user_location", user_location.toString());
-                Log.d("move_distance", String.valueOf(move_distance));
+                Log.d(TAG, "user_location:" + user_location.toString());
+                Log.d(TAG, "move_distance" + String.valueOf(move_distance));
 
                 // 如果第一次取回GPS、沒有送出要求、大於最小更新GPS距離
                 // 則送出規畫路徑要求
@@ -168,6 +171,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                         int i = 0;
                         double distance = 0;
                         String instruction = "";
+                        String show = "";
 
                         path.remove(0);
                         path.add(0, location);
@@ -189,7 +193,14 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                         }
 
                         instruction = instructions.size() == 0 ? "arrive" : instructions.get(0).getInstruction();
-                        txtInstruction.setText(String.format("在%d公尺%s", (int)distance, instruction));
+
+                        if (distance > 0) {
+                            show = String.format("在%d公尺%s", (int)distance, instruction);
+                        } else {
+                            show = "arrive";
+                        }
+
+                        txtInstruction.setText(show);
                         sendMessage(instruction, (int)distance);
 
                         drawPolyLine(mMap, path);
@@ -214,6 +225,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         btnNavigate.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                if (longclick) {
+                    longclick = false;
+                    return;
+                }
+
                 String[] command = edtEnd.getText().toString().split(" ");
 
                 if (command[0].equals("test")) {
@@ -228,7 +244,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                                         if (location != null) {
                                             ArrayList<String> aryWayPoints = new ArrayList<>();
                                             aryWayPoints.add(location.getLatitude() + "," + location.getLongitude());
-                                            
+
                                             for (int i = 0; i < edtWayPoints.size(); i++) {
                                                 aryWayPoints.add(edtWayPoints.get(i).getText().toString());
                                             }
@@ -245,6 +261,20 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         btnNavigate.setOnLongClickListener(new View.OnLongClickListener() {
             @Override
             public boolean onLongClick(View v) {
+                longclick = true;
+
+                path = new ArrayList<LatLng>();
+                path.add(new LatLng(25.11757558005345,121.52135152369739));
+                path.add(new LatLng(25.118329043330146,121.52105011045931));
+                path.add(new LatLng(25.118316900526093,121.5210236236453));
+                path.add(new LatLng(25.117835437373067,121.5212070196867));
+                path.add(new LatLng(25.117850008795184,121.52124188840389));
+                endLocation = new LatLng(25.117850008795184,121.52124188840389);
+
+                instructions.add(new Instruction("uturn-left", new LatLng(25.118329043330146,121.52105011045931)));
+                instructions.add(new Instruction("turn-left", new LatLng(25.117835437373067,121.5212070196867)));
+
+                locationRequest();
                 return false;
             }
         });
@@ -360,7 +390,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             String status = response.getString("status"); // 規劃狀態碼
             String message = ""; // 錯誤訊息
 
-            Log.d("status", status);
+            Log.d(TAG, "status:" + status);
             switch (status) {
                 case "OK":
                     JSONObject routes = response.getJSONArray("routes").getJSONObject(0);
@@ -373,7 +403,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     this.path = PolyUtil.decode(str_points);
 
                     drawPolyLine(mMap, path);
-                    Log.d("endLocation", endLocation.toString());
+                    Log.d(TAG, "endLocation" + endLocation.toString());
 
                     for (int i = 0; i < steps.length(); i++) {
                         if (!steps.getJSONObject(i).isNull("maneuver")) {
@@ -405,50 +435,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     // 設定初值
                     prevLocation = null;
 
-                    // 確認手機設定符合GPS精確度條件
-                    LocationSettingsRequest.Builder builder = new LocationSettingsRequest.Builder()
-                            .addLocationRequest(mLocationRequest);
-                    SettingsClient client = LocationServices.getSettingsClient(MapsActivity.this);
-                    Task<LocationSettingsResponse> task = client.checkLocationSettings(builder.build());
-                    task.addOnSuccessListener(MapsActivity.this, new OnSuccessListener<LocationSettingsResponse>() {
-                        @Override
-                        public void onSuccess(LocationSettingsResponse locationSettingsResponse) {
-                            if (checkPermission(Manifest.permission.ACCESS_FINE_LOCATION, REQUEST_ACCESS_FINE_LOCATION)) {
-
-                                // 要求定期更新GPS
-                                mFusedLocationClient.requestLocationUpdates(mLocationRequest,
-                                        mLocationCallback,
-                                        null /* Looper */);
-                            }
-                        }
-                    });
-
-                    task.addOnFailureListener(MapsActivity.this, new OnFailureListener() {
-                        @Override
-                        public void onFailure(@NonNull Exception e) {
-                            int statusCode = ((ApiException) e).getStatusCode();
-                            switch (statusCode) {
-                                case CommonStatusCodes.RESOLUTION_REQUIRED:
-                                    // Location settings are not satisfied, but this can be fixed
-                                    // by showing the user a dialog.
-                                    try {
-                                        // Show the dialog by calling startResolutionForResult(),
-                                        // and check the result in onActivityResult().
-                                        ResolvableApiException resolvable = (ResolvableApiException) e;
-                                        resolvable.startResolutionForResult(MapsActivity.this,
-                                                REQUEST_CHECK_SETTINGS);
-                                    } catch (IntentSender.SendIntentException sendEx) {
-                                        // Ignore the error.
-                                    }
-                                    break;
-                                case LocationSettingsStatusCodes.SETTINGS_CHANGE_UNAVAILABLE:
-                                    // Location settings are not satisfied. However, we have no way
-                                    // to fix the settings so we won't show the dialog.
-                                    break;
-                            }
-                        }
-                    });
-
+                    locationRequest();
                     break;
                 case "NOT_FOUND": // 找不到地點
                     message += getString(R.string.not_found);
@@ -504,35 +491,35 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     // 傳送轉彎及距離訊息給arduino
     private void sendMessage(String instruction, int distance) {
-        try{
-            myOutputStream = myBluetoothSocket.getOutputStream();
-            //myOutputStream.write("Success".getBytes());
-            String dis = String.format("%03d", distance);
-            if(instruction.equals("turn-right")) {
-                myOutputStream.write("R".getBytes());
-                myOutputStream.write(dis.getBytes());
-            }
-            else if(instruction.equals("turn-left")){
-                myOutputStream.write("L".getBytes());
-                myOutputStream.write(dis.getBytes());
-            }
-            else if(instruction.equals("uturn-left")){
-                myOutputStream.write("u".getBytes());
-                myOutputStream.write(dis.getBytes());
-            }
-            else if(instruction.equals("uturn-right")){
-                myOutputStream.write("U".getBytes());
-                myOutputStream.write(dis.getBytes());
-            }
-            Log.d("Success", "Send Success");
-        }catch(IOException io){
-            try{
-            myOutputStream = myBluetoothSocket.getOutputStream();
-            myOutputStream.write("ERROR".getBytes());
-
-        }catch(IOException io2) {}
-            Log.d("ERROR", "Send Error");
-       }
+//        try{
+//            myOutputStream = myBluetoothSocket.getOutputStream();
+//            //myOutputStream.write("Success".getBytes());
+//            String dis = String.format("%03d", distance);
+//            if(instruction.equals("turn-right")) {
+//                myOutputStream.write("R".getBytes());
+//                myOutputStream.write(dis.getBytes());
+//            }
+//            else if(instruction.equals("turn-left")){
+//                myOutputStream.write("L".getBytes());
+//                myOutputStream.write(dis.getBytes());
+//            }
+//            else if(instruction.equals("uturn-left")){
+//                myOutputStream.write("u".getBytes());
+//                myOutputStream.write(dis.getBytes());
+//            }
+//            else if(instruction.equals("uturn-right")){
+//                myOutputStream.write("U".getBytes());
+//                myOutputStream.write(dis.getBytes());
+//            }
+//            Log.d(TAG, "Success: Send Success");
+//        }catch(IOException io){
+//            try{
+//            myOutputStream = myBluetoothSocket.getOutputStream();
+//            myOutputStream.write("ERROR".getBytes());
+//
+//        }catch(IOException io2) {}
+//            Log.d(TAG, "ERROR: Send Error");
+//       }
     }
 
     private View.OnFocusChangeListener onEditTextFocus = new View.OnFocusChangeListener() {
@@ -543,6 +530,52 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             }
         }
     };
+
+    private void locationRequest() {
+        // 確認手機設定符合GPS精確度條件
+        LocationSettingsRequest.Builder builder = new LocationSettingsRequest.Builder()
+                .addLocationRequest(mLocationRequest);
+        SettingsClient client = LocationServices.getSettingsClient(MapsActivity.this);
+        Task<LocationSettingsResponse> task = client.checkLocationSettings(builder.build());
+        task.addOnSuccessListener(MapsActivity.this, new OnSuccessListener<LocationSettingsResponse>() {
+            @Override
+            public void onSuccess(LocationSettingsResponse locationSettingsResponse) {
+                if (checkPermission(Manifest.permission.ACCESS_FINE_LOCATION, REQUEST_ACCESS_FINE_LOCATION)) {
+
+                    // 要求定期更新GPS
+                    mFusedLocationClient.requestLocationUpdates(mLocationRequest,
+                            mLocationCallback,
+                            null /* Looper */);
+                }
+            }
+        });
+
+        task.addOnFailureListener(MapsActivity.this, new OnFailureListener() {
+            @Override
+            public void onFailure(@NonNull Exception e) {
+                int statusCode = ((ApiException) e).getStatusCode();
+                switch (statusCode) {
+                    case CommonStatusCodes.RESOLUTION_REQUIRED:
+                        // Location settings are not satisfied, but this can be fixed
+                        // by showing the user a dialog.
+                        try {
+                            // Show the dialog by calling startResolutionForResult(),
+                            // and check the result in onActivityResult().
+                            ResolvableApiException resolvable = (ResolvableApiException) e;
+                            resolvable.startResolutionForResult(MapsActivity.this,
+                                    REQUEST_CHECK_SETTINGS);
+                        } catch (IntentSender.SendIntentException sendEx) {
+                            // Ignore the error.
+                        }
+                        break;
+                    case LocationSettingsStatusCodes.SETTINGS_CHANGE_UNAVAILABLE:
+                        // Location settings are not satisfied. However, we have no way
+                        // to fix the settings so we won't show the dialog.
+                        break;
+                }
+            }
+        });
+    }
 
     private class Request extends AsyncTask<URL, Integer, JSONObject> {
 
@@ -560,7 +593,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     output += (char)temp;
                 }
                 in.close();
-                Log.d("direction_response", output);
+                Log.d(TAG, "direction_response:" + output);
 
                 return new JSONObject(output);
             } catch (Exception e) {
